@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 
 	"github.com/almighty/almighty-core/log"
 	"github.com/goadesign/goa/middleware"
@@ -98,7 +99,7 @@ func (cs *StarterClient) ListWorkspaces(ctx context.Context, repository string) 
 }
 
 // CreateWorkspace creates a new Che Workspace based on a repository
-func (cs *StarterClient) CreateWorkspace(ctx context.Context, workspace WorkspaceRequest) (*WorkspaceResponse, error) {
+func (cs *StarterClient) CreateWorkspace(ctx context.Context, workspace WorkspaceRequest) (*WorkspaceLink, error) {
 	body, err := json.Marshal(&workspace)
 	if err != nil {
 		log.Error(ctx, map[string]interface{}{
@@ -151,7 +152,7 @@ func (cs *StarterClient) CreateWorkspace(ctx context.Context, workspace Workspac
 		return nil, &workspaceErr
 	}
 
-	workspaceResp := WorkspaceResponse{}
+	workspaceResp := WorkspaceLink{}
 	err = json.NewDecoder(resp.Body).Decode(&workspaceResp)
 	if err != nil {
 		log.Error(ctx, map[string]interface{}{
@@ -201,6 +202,18 @@ func (w WorkspaceResponse) GetIDEURL() string {
 			return l.HRef
 		}
 	}
+	return ""
+}
+
+// GetWorkspaceName parses the workspace name from the link HRef url. We have to
+// do this until che-starter returns the workspace name within the retunr obj.
+func (w WorkspaceLink) GetWorkspaceName() string {
+	urlPart := strings.Split(w.HRef, "/")
+
+	if len(urlPart) > 0 {
+		return urlPart[len(urlPart)-1]
+	}
+	// This should never happen...
 	return ""
 }
 

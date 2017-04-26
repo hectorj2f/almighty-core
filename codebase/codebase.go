@@ -1,13 +1,13 @@
 package codebase
 
 import (
-	"log"
 	"time"
 
 	"golang.org/x/net/context"
 
 	"github.com/almighty/almighty-core/errors"
 	"github.com/almighty/almighty-core/gormsupport"
+
 	"github.com/goadesign/goa"
 	"github.com/jinzhu/gorm"
 	errs "github.com/pkg/errors"
@@ -166,7 +166,7 @@ func (m *GormCodebaseRepository) Save(ctx context.Context, codebase *Codebase) (
 	if err := tx.Error; err != nil {
 		return nil, errors.NewInternalError(err.Error())
 	}
-	log.Printf("updated codebase to %v\n", codebase)
+
 	return codebase, nil
 }
 

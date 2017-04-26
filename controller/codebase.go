@@ -162,8 +162,15 @@ func (c *CodebaseController) Create(ctx *app.CreateCodebaseContext) error {
 		return jsonapi.JSONErrorResponse(ctx, goa.ErrInternal(err.Error()))
 	}
 
+	workspaceName := workspaceResp.GetWorkspaceName()
+	log.Info(ctx, map[string]interface{}{
+		"codebase_id":    cb.ID,
+		"stack_id":       stackID,
+		"workspace_name": workspaceName,
+	}, "workspace created successfully!")
+
 	err = application.Transactional(c.db, func(appl application.Application) error {
-		cb.LastUsedWorkspace = workspaceResp.Config.Name
+		cb.LastUsedWorkspace = workspaceName
 		_, err = appl.Codebases().Save(ctx, cb)
 		if err != nil {
 			return err
@@ -174,10 +181,9 @@ func (c *CodebaseController) Create(ctx *app.CreateCodebaseContext) error {
 		return jsonapi.JSONErrorResponse(ctx, err)
 	}
 
-	ideURL := workspaceResp.GetIDEURL()
 	resp := &app.WorkspaceOpen{
 		Links: &app.WorkspaceOpenLinks{
-			Open: &ideURL,
+			Open: &workspaceResp.HRef,
 		},
 	}
 	return ctx.OK(resp)
@@ -200,9 +206,7 @@ func (c *CodebaseController) Open(ctx *app.OpenCodebaseContext) error {
 	if err != nil {
 		return jsonapi.JSONErrorResponse(ctx, goa.ErrInternal(err.Error()))
 	}
-	if err != nil {
-		return jsonapi.JSONErrorResponse(ctx, goa.ErrInternal(err.Error()))
-	}
+
 	cheClient := che.NewStarterClient(c.config.GetCheStarterURL(), c.config.GetOpenshiftTenantMasterURL(), getNamespace(ctx))
 	workspace := che.WorkspaceRequest{
 		Name:       ctx.WorkspaceID,
@@ -213,29 +217,42 @@ func (c *CodebaseController) Open(ctx *app.OpenCodebaseContext) error {
 	workspaceResp, err := cheClient.CreateWorkspace(ctx, workspace)
 	if err != nil {
 		log.Error(ctx, map[string]interface{}{
-			"codebase_id": cb.ID,
-			"stack_id":    cb.StackID,
-			"err":         err,
+			"codebase_id":    cb.ID,
+			"stack_id":       cb.StackID,
+			"workspace_name": ctx.WorkspaceID,
+			"err":            err,
 		}, "unable to open workspaces")
 		if werr, ok := err.(*che.WorkspaceError); ok {
-			fmt.Println(werr.String())
+			log.Error(ctx, map[string]interface{}{
+				"err": werr.String()},
+				"error opening the workspace")
 		}
 		return jsonapi.JSONErrorResponse(ctx, goa.ErrInternal(err.Error()))
 	}
 
+	workspaceName := workspaceResp.GetWorkspaceName()
+	log.Info(ctx, map[string]interface{}{
+		"codebase_id":        cb.ID,
+		"stack_id":           cb.StackID,
+		"workspace_ctx_name": ctx.WorkspaceID,
+		"workspace_url_name": workspaceName,
+	}, "workspace opened successfully!")
+
 	err = application.Transactional(c.db, func(appl application.Application) error {
-		cb.LastUsedWorkspace = ctx.WorkspaceID
+		cb.LastUsedWorkspace = workspaceName
 		_, err = appl.Codebases().Save(ctx, cb)
 		if err != nil {
 			return jsonapi.JSONErrorResponse(ctx, goa.ErrNotFound(err.Error()))
 		}
 		return nil
 	})
+	if err != nil {
+		return jsonapi.JSONErrorResponse(ctx, goa.ErrInternal(err.Error()))
+	}
 
-	ideURL := workspaceResp.GetIDEURL()
 	resp := &app.WorkspaceOpen{
 		Links: &app.WorkspaceOpenLinks{
-			Open: &ideURL,
+			Open: &workspaceResp.HRef,
 		},
 	}
 	return ctx.OK(resp)
