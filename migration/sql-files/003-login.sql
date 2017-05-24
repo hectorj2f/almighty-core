@@ -22,5 +22,3 @@ CREATE TABLE users (
     email text,
     identity_id uuid
 );
-
-CREATE UNIQUE INDEX uix_users_email ON users USING btree (email);

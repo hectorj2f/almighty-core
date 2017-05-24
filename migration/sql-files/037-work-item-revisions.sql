@@ -10,7 +10,6 @@ CREATE TABLE work_item_revisions (
     work_item_fields jsonb
 );
 
-CREATE INDEX work_item_revisions_work_items_idx ON work_item_revisions USING BTREE (work_item_id);
 
 ALTER TABLE work_item_revisions
     ADD CONSTRAINT work_item_revisions_identity_fk FOREIGN KEY (modifier_id) REFERENCES identities(id);
@@ -18,7 +17,3 @@ ALTER TABLE work_item_revisions
 -- delete work item revisions when the work item is deleted from the database.
 ALTER TABLE work_item_revisions
     ADD CONSTRAINT work_item_revisions_work_items_fk FOREIGN KEY (work_item_id) REFERENCES work_items(id) ON DELETE CASCADE;
-
-
-
-

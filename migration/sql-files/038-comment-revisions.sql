@@ -9,7 +9,6 @@ CREATE TABLE comment_revisions (
     comment_markup text
 );
 
-CREATE INDEX comment_revisions_comment_id_idx ON comment_revisions USING BTREE (comment_id);
 
 ALTER TABLE comment_revisions
     ADD CONSTRAINT comment_revisions_identity_fk FOREIGN KEY (modifier_id) REFERENCES identities(id);
@@ -17,7 +16,3 @@ ALTER TABLE comment_revisions
 -- delete comment revisions when the comment is deleted from the database.
 ALTER TABLE comment_revisions
     ADD CONSTRAINT comment_revisions_comments_fk FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE;
-
-
-
-

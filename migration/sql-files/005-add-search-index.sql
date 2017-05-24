@@ -6,8 +6,6 @@ UPDATE work_items SET tsv =
     setweight(to_tsvector('english', coalesce(fields->>'system.title','')),'B') ||
     setweight(to_tsvector('english', coalesce(fields->>'system.description','')),'C');
 
-CREATE INDEX fulltext_search_index ON work_items USING GIN (tsv);
-
 CREATE FUNCTION workitem_tsv_trigger() RETURNS trigger AS $$
 begin
   new.tsv :=

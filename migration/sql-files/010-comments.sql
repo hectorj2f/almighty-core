@@ -7,5 +7,3 @@ CREATE TABLE comments (
     body text,
     created_by uuid
 );
-
-CREATE INDEX ix_parent_id ON comments USING btree (parent_id);

@@ -13,4 +13,3 @@ WHERE id IN (
 -- From now on ensure we only have ONE link with the same source, target and
 -- link type in existence. If a link has been deleted (deleted_at != NULL) then
 -- we can recreate the link with the source, target and link type again.
-CREATE UNIQUE INDEX work_item_links_unique_idx ON work_item_links (source_id, target_id, link_type_id) WHERE deleted_at IS NULL;

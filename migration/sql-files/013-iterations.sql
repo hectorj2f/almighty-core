@@ -9,5 +9,3 @@ CREATE TABLE iterations (
     end_at timestamp with time zone,
     name text
 );
-
-CREATE INDEX ix_project_id ON iterations USING btree (project_id);

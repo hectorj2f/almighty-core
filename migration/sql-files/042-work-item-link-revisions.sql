@@ -11,7 +11,6 @@ CREATE TABLE work_item_link_revisions (
     work_item_link_type_id uuid NOT NULL
 );
 
-CREATE INDEX work_item_link_revisions_work_item_link_id_idx ON work_item_link_revisions USING BTREE (work_item_link_id);
 
 ALTER TABLE work_item_link_revisions
     ADD CONSTRAINT work_item_link_revisions_modifier_id_fk FOREIGN KEY (modifier_id) REFERENCES identities(id);
@@ -19,4 +18,3 @@ ALTER TABLE work_item_link_revisions
 -- delete work item revisions when the work item is deleted from the database.
 ALTER TABLE work_item_link_revisions
     ADD CONSTRAINT work_item_link_revisions_work_item_link_id_fk FOREIGN KEY (work_item_link_id) REFERENCES work_item_links(id) ON DELETE CASCADE;
-

@@ -7,5 +7,3 @@ CREATE TABLE codebases (
     type text,
     url text
 );
-
-CREATE INDEX ix_codebases_space_id ON codebases USING btree (space_id);

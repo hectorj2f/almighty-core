@@ -12,4 +12,3 @@ CREATE TABLE projects (
 
     name        text NOT NULL CHECK(name <> '')
 );
-CREATE UNIQUE INDEX projects_name_idx ON projects (name) WHERE deleted_at IS NULL;

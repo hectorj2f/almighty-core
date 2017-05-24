@@ -16,4 +16,3 @@ UPDATE iterations SET path = regexp_replace(path, '[^a-zA-Z0-9_\.]', '_', 'g');
 ALTER TABLE iterations ALTER path TYPE ltree USING path::ltree;
 
 -- Enable full text search operaions using GIST index on path
-CREATE INDEX iteration_path_gist_idx ON iterations USING GIST (path);

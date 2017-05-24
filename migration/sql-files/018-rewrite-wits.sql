@@ -21,12 +21,11 @@ UPDATE work_item_types SET
 -- Convert the path column from type text to ltree
 ALTER TABLE work_item_types ALTER COLUMN path TYPE ltree USING path::ltree;
 
--- Add a constraint to the work item type name 
+-- Add a constraint to the work item type name
 ALTER TABLE work_item_types ADD CONSTRAINT work_item_link_types_check_name_c_locale CHECK (name ~ '[a-zA-Z0-9_]');
 
--- Add indexes 
-CREATE INDEX wit_path_gist_idx ON work_item_types USING GIST (path);
-CREATE INDEX wit_path_idx ON work_item_types USING BTREE (path);
+-- Add indexes
+
 
 
 ---------------------------------------------------------------------------
