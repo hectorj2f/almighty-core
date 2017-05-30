@@ -92,6 +92,9 @@ func main() {
 			time.Sleep(configuration.GetPostgresConnectionRetrySleep())
 		} else {
 			defer db.Close()
+			db.DB().SetConnMaxLifetime(0)
+			db.DB().SetMaxOpenConns(configuration.GetPostgresConnectionMaxOpen())
+			db.DB().SetMaxIdleConns(configuration.GetPostgresConnectionMaxIdle())
 			break
 		}
 	}
