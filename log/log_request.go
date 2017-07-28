@@ -56,7 +56,11 @@ func LogRequest(verbose bool) goa.Middleware {
 				if len(r.Header) > 0 {
 					properties := make(map[string]interface{}, len(r.Header))
 					for k, v := range r.Header {
-						properties[string(k)] = v
+						if k == "Authorization" || k == "Cookie" {
+							properties[string(k)] = "*****"
+						} else {
+							properties[string(k)] = v
+						}
 					}
 					Info(ctx, properties, "request headers")
 				}
