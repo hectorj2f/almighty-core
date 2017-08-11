@@ -1,4 +1,4 @@
-PROJECT_NAME=almighty-core
+PROJECT_NAME=fabric8-wit
 CUR_DIR=$(shell pwd)
 TMP_PATH=$(CUR_DIR)/tmp
 INSTALL_PREFIX=$(CUR_DIR)/bin
@@ -12,7 +12,6 @@ SOURCE_DIR ?= .
 SOURCES := $(shell find $(SOURCE_DIR) -path $(SOURCE_DIR)/vendor -prune -o -name '*.go' -print)
 DESIGN_DIR=design
 DESIGNS := $(shell find $(SOURCE_DIR)/$(DESIGN_DIR) -path $(SOURCE_DIR)/vendor -prune -o -name '*.go' -print)
-
 
 # Find all required tools:
 GIT_BIN := $(shell command -v $(GIT_BIN_NAME) 2> /dev/null)
@@ -30,7 +29,7 @@ export GIT_COMMITTER_NAME
 export GIT_COMMITTER_EMAIL
 
 # Used as target and binary output names... defined in includes
-CLIENT_DIR=tool/alm-cli
+CLIENT_DIR=tool/wit-cli
 
 COMMIT=$(shell git rev-parse HEAD)
 GITUNTRACKEDCHANGES := $(shell git status --porcelain --untracked-files=no)
@@ -39,13 +38,13 @@ COMMIT := $(COMMIT)-dirty
 endif
 BUILD_TIME=`date -u '+%Y-%m-%dT%H:%M:%SZ'`
 
-PACKAGE_NAME := github.com/almighty/almighty-core
+PACKAGE_NAME := github.com/fabric8-services/fabric8-wit
 
 # For the global "clean" target all targets in this variable will be executed
 CLEAN_TARGETS =
 
 # Pass in build time variables to main
-LDFLAGS=-ldflags "-X main.Commit=${COMMIT} -X main.BuildTime=${BUILD_TIME}"
+LDFLAGS=-ldflags "-X ${PACKAGE_NAME}/controller.Commit=${COMMIT} -X ${PACKAGE_NAME}/controller.BuildTime=${BUILD_TIME}"
 
 # Call this function with $(call log-info,"Your message")
 define log-info =
@@ -84,6 +83,46 @@ help:/
           } \
         }' $(MAKEFILE_LIST)
 
+.PHONY: check-go-format
+## Exists with an error if there are files whose formatting differs from gofmt's
+check-go-format: prebuild-check
+	@gofmt -s -l ${SOURCES} 2>&1 \
+		| tee /tmp/gofmt-errors \
+		| read \
+	&& echo "ERROR: These files differ from gofmt's style (run 'make format-go-code' to fix this):" \
+	&& cat /tmp/gofmt-errors \
+	&& exit 1 \
+	|| true
+
+
+
+.PHONY: release
+release: all
+
+.PHONY: analyze-go-code
+## Run a complete static code analysis using the following tools: golint, gocyclo and go-vet.
+analyze-go-code: golint gocyclo govet
+
+## Run gocyclo analysis over the code.
+golint: $(GOLINT_BIN)
+	$(info >>--- RESULTS: GOLINT CODE ANALYSIS ---<<)
+	@$(foreach d,$(GOANALYSIS_DIRS),$(GOLINT_BIN) $d 2>&1 | grep -vEf .golint_exclude || true;)
+
+## Run gocyclo analysis over the code.
+gocyclo: $(GOCYCLO_BIN)
+	$(info >>--- RESULTS: GOCYCLO CODE ANALYSIS ---<<)
+	@$(foreach d,$(GOANALYSIS_DIRS),$(GOCYCLO_BIN) -over 10 $d | grep -vEf .golint_exclude || true;)
+
+## Run go vet analysis over the code.
+govet:
+	$(info >>--- RESULTS: GO VET CODE ANALYSIS ---<<)
+	@$(foreach d,$(GOANALYSIS_DIRS),go tool vet --all $d/*.go 2>&1;)
+
+.PHONY: format-go-code
+## Formats any go file that differs from gofmt's style
+format-go-code: prebuild-check
+	@gofmt -s -l -w ${SOURCES}
+
 .PHONY: build
 ## Build server and client.
 build: prebuild-check deps generate $(BINARY_SERVER_BIN) $(BINARY_CLIENT_BIN) # do the build
@@ -102,14 +141,28 @@ else
 	cd ${CLIENT_DIR}/ && go build -v -o ${BINARY_CLIENT_BIN}
 endif
 
+# Build go tool to analysis the code
+$(GOLINT_BIN):
+	cd $(VENDOR_DIR)/github.com/golang/lint/golint && go build -v
+$(GOCYCLO_BIN):
+	cd $(VENDOR_DIR)/github.com/fzipp/gocyclo && go build -v
+
 # Pack all migration SQL files into a compilable Go file
-migration/sqlbindata.go: $(GO_BINDATA_BIN) $(wildcard migration/sql-files/*.sql)
+migration/sqlbindata.go: $(GO_BINDATA_BIN) $(wildcard migration/sql-files/*.sql) migration/sqlbindata_test.go
 	$(GO_BINDATA_BIN) \
 		-o migration/sqlbindata.go \
 		-pkg migration \
 		-prefix migration/sql-files \
 		-nocompress \
 		migration/sql-files
+
+migration/sqlbindata_test.go: $(GO_BINDATA_BIN) $(wildcard migration/sql-test-files/*.sql)
+	$(GO_BINDATA_BIN) \
+		-o migration/sqlbindata_test.go \
+		-pkg migration_test \
+		-prefix migration/sql-test-files \
+		-nocompress \
+		migration/sql-test-files
 
 # These are binary tools from our vendored packages
 $(GOAGEN_BIN): $(VENDOR_DIR)
@@ -120,6 +173,8 @@ $(GO_BINDATA_ASSETFS_BIN): $(VENDOR_DIR)
 	cd $(VENDOR_DIR)/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs && go build -v
 $(FRESH_BIN): $(VENDOR_DIR)
 	cd $(VENDOR_DIR)/github.com/pilu/fresh && go build -v
+$(GO_JUNIT_BIN): $(VENDOR_DIR)
+	cd $(VENDOR_DIR)/github.com/jstemmer/go-junit-report && go build -v
 
 CLEAN_TARGETS += clean-artifacts
 .PHONY: clean-artifacts
@@ -144,6 +199,8 @@ clean-generated:
 	-rm -rf ./tool/cli/
 	-rm -f ./bindata_assetfs.go
 	-rm -f ./migration/sqlbindata.go
+	-rm -f ./migration/sqlbindata_test.go
+	-rm -rf ./account/tenant
 
 CLEAN_TARGETS += clean-vendor
 .PHONY: clean-vendor
@@ -158,7 +215,7 @@ clean-glide-cache:
 	-rm -rf ./.glide
 
 $(VENDOR_DIR): glide.lock glide.yaml
-	$(GLIDE_BIN) --verbose install
+	$(GLIDE_BIN) install
 	touch $(VENDOR_DIR)
 
 .PHONY: deps
@@ -166,7 +223,15 @@ $(VENDOR_DIR): glide.lock glide.yaml
 deps: $(VENDOR_DIR)
 
 app/controllers.go: $(DESIGNS) $(GOAGEN_BIN) $(VENDOR_DIR)
-	$(GOAGEN_BIN) bootstrap -d ${PACKAGE_NAME}/${DESIGN_DIR}
+	$(GOAGEN_BIN) app -d ${PACKAGE_NAME}/${DESIGN_DIR}
+	$(GOAGEN_BIN) controller -d ${PACKAGE_NAME}/${DESIGN_DIR} -o controller/ --pkg controller --app-pkg ${PACKAGE_NAME}/app
+	$(GOAGEN_BIN) gen -d ${PACKAGE_NAME}/${DESIGN_DIR} --pkg-path=${PACKAGE_NAME}/goasupport/conditional_request --out app
+	$(GOAGEN_BIN) gen -d ${PACKAGE_NAME}/${DESIGN_DIR} --pkg-path=${PACKAGE_NAME}/goasupport/helper_function --out app
+	$(GOAGEN_BIN) client -d ${PACKAGE_NAME}/${DESIGN_DIR}
+	$(GOAGEN_BIN) swagger -d ${PACKAGE_NAME}/${DESIGN_DIR}
+	$(GOAGEN_BIN) client -d github.com/fabric8-services/fabric8-tenant/design --notool --pkg tenant -o account
+	$(GOAGEN_BIN) client -d github.com/fabric8-services/fabric8-notification/design --notool --pkg client -o notification
+
 
 assets/js/client.js: $(DESIGNS) $(GOAGEN_BIN) $(VENDOR_DIR)
 	$(GOAGEN_BIN) js -d ${PACKAGE_NAME}/${DESIGN_DIR} -o assets/ --noexample
@@ -183,10 +248,14 @@ migrate-database: $(BINARY_SERVER_BIN)
 ## Generate GOA sources. Only necessary after clean of if changed `design` folder.
 generate: app/controllers.go assets/js/client.js bindata_assetfs.go migration/sqlbindata.go
 
+.PHONY: regenerate
+## Runs the "clean-generated" and the "generate" target
+regenerate: clean-generated generate
+
 .PHONY: dev
 dev: prebuild-check deps generate $(FRESH_BIN)
 	docker-compose up -d db
-	ALMIGHTY_DEVELOPER_MODE_ENABLED=true $(FRESH_BIN)
+	F8_DEVELOPER_MODE_ENABLED=true $(FRESH_BIN)
 
 include ./.make/test.mk
 
@@ -215,16 +284,16 @@ endif
 ifndef HG_BIN
 	$(error The "$(HG_BIN_NAME)" executable could not be found in your PATH)
 endif
-	@$(CHECK_GOPATH_BIN) $(PACKAGE_NAME) || (echo "Project lives in wrong location"; exit 1)
+	@$(CHECK_GOPATH_BIN) -packageName=$(PACKAGE_NAME) || (echo "Project lives in wrong location"; exit 1)
 
-$(CHECK_GOPATH_BIN): .make/check-gopath.go
+$(CHECK_GOPATH_BIN): .make/check_gopath.go
 ifndef GO_BIN
 	$(error The "$(GO_BIN_NAME)" executable could not be found in your PATH)
 endif
 ifeq ($(OS),Windows_NT)
-	@go build -o "$(shell cygpath --windows '$(CHECK_GOPATH_BIN)')" .make/check-gopath.go
+	@go build -o "$(shell cygpath --windows '$(CHECK_GOPATH_BIN)')" .make/check_gopath.go
 else
-	@go build -o $(CHECK_GOPATH_BIN) .make/check-gopath.go
+	@go build -o $(CHECK_GOPATH_BIN) .make/check_gopath.go
 endif
 
 # Keep this "clean" target here at the bottom

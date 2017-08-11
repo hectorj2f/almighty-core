@@ -1,16 +1,23 @@
 package remoteworkitem
 
 import (
-	"log"
 	"strconv"
 
-	"github.com/almighty/almighty-core/app"
-	"github.com/almighty/almighty-core/criteria"
-	"github.com/almighty/almighty-core/models"
+	"fmt"
+
+	"context"
+
+	"github.com/fabric8-services/fabric8-wit/app"
+	"github.com/fabric8-services/fabric8-wit/application/repository"
+	"github.com/fabric8-services/fabric8-wit/criteria"
+	"github.com/fabric8-services/fabric8-wit/log"
+	"github.com/fabric8-services/fabric8-wit/workitem"
 	"github.com/jinzhu/gorm"
-	"golang.org/x/net/context"
+	"github.com/pkg/errors"
 	govalidator "gopkg.in/asaskevich/govalidator.v4"
 )
+
+const trackersTableName = "trackers"
 
 // GormTrackerRepository implements TrackerRepository using gorm
 type GormTrackerRepository struct {
@@ -43,7 +50,10 @@ func (r *GormTrackerRepository) Create(ctx context.Context, url string, typeID s
 	if err := tx.Create(&t).Error; err != nil {
 		return nil, InternalError{simpleError{err.Error()}}
 	}
-	log.Printf("created tracker %v\n", t)
+	log.Info(ctx, map[string]interface{}{
+		"tracker": t,
+	}, "Tracker reposity created")
+
 	t2 := app.Tracker{
 		ID:   strconv.FormatUint(t.ID, 10),
 		URL:  url,
@@ -56,16 +66,26 @@ func (r *GormTrackerRepository) Create(ctx context.Context, url string, typeID s
 // returns NotFoundError, ConversionError or InternalError
 func (r *GormTrackerRepository) Load(ctx context.Context, ID string) (*app.Tracker, error) {
 	id, err := strconv.ParseUint(ID, 10, 64)
-	if err != nil {
+	if err != nil || id == 0 {
 		// treating this as a not found error: the fact that we're using number internal is implementation detail
 		return nil, NotFoundError{"tracker", ID}
 	}
 
-	log.Printf("loading tracker %d", id)
+	log.Info(ctx, map[string]interface{}{
+		"tracker_id": id,
+	}, "Loading tracker repository...")
+
 	res := Tracker{}
-	if r.db.First(&res, id).RecordNotFound() {
-		log.Printf("not found, res=%v", res)
+	tx := r.db.First(&res, id)
+	if tx.RecordNotFound() {
+		log.Error(ctx, map[string]interface{}{
+			"tracker_id": ID,
+		}, "tracker repository not found")
+
 		return nil, NotFoundError{"tracker", ID}
+	}
+	if tx.Error != nil {
+		return nil, InternalError{simpleError{fmt.Sprintf("error while loading: %s", tx.Error.Error())}}
 	}
 	t := app.Tracker{
 		ID:   strconv.FormatUint(res.ID, 10),
@@ -75,14 +95,21 @@ func (r *GormTrackerRepository) Load(ctx context.Context, ID string) (*app.Track
 	return &t, nil
 }
 
+// CheckExists returns nil if the given ID exists otherwise returns an error
+func (r *GormTrackerRepository) CheckExists(ctx context.Context, id string) error {
+	return repository.CheckExists(ctx, r.db, trackersTableName, id)
+}
+
 // List returns tracker selected by the given criteria.Expression, starting with start (zero-based) and returning at most limit items
 func (r *GormTrackerRepository) List(ctx context.Context, criteria criteria.Expression, start *int, limit *int) ([]*app.Tracker, error) {
-	where, parameters, err := models.Compile(criteria)
+	where, parameters, err := workitem.Compile(criteria)
 	if err != nil {
 		return nil, BadParameterError{"expression", criteria}
 	}
 
-	log.Printf("executing query: %s", where)
+	log.Info(ctx, map[string]interface{}{
+		"query": where,
+	}, "Executing tracker repository query...")
 
 	var rows []Tracker
 	db := r.db.Where(where, parameters...)
@@ -93,7 +120,7 @@ func (r *GormTrackerRepository) List(ctx context.Context, criteria criteria.Expr
 		db = db.Limit(*limit)
 	}
 	if err := db.Find(&rows).Error; err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	result := make([]*app.Tracker, len(rows))
 
@@ -112,14 +139,20 @@ func (r *GormTrackerRepository) List(ctx context.Context, criteria criteria.Expr
 func (r *GormTrackerRepository) Save(ctx context.Context, t app.Tracker) (*app.Tracker, error) {
 	res := Tracker{}
 	id, err := strconv.ParseUint(t.ID, 10, 64)
-	if err != nil {
+	if err != nil || id == 0 {
 		return nil, NotFoundError{entity: "tracker", ID: t.ID}
 	}
 
-	log.Printf("looking for id %d", id)
-	tx := r.db
-	if tx.First(&res, id).RecordNotFound() {
-		log.Printf("not found, res=%v", res)
+	log.Info(ctx, map[string]interface{}{
+		"tracker_id": id,
+	}, "Looking for a tracker repository with id ", id)
+
+	tx := r.db.First(&res, id)
+	if tx.RecordNotFound() {
+		log.Error(ctx, map[string]interface{}{
+			"tracker_id": id,
+		}, "tracker repository not found")
+
 		return nil, NotFoundError{entity: "tracker", ID: t.ID}
 	}
 	_, present := RemoteWorkItemImplRegistry[t.Type]
@@ -134,10 +167,17 @@ func (r *GormTrackerRepository) Save(ctx context.Context, t app.Tracker) (*app.T
 		Type: t.Type}
 
 	if err := tx.Save(&newT).Error; err != nil {
-		log.Print(err.Error())
+		log.Error(ctx, map[string]interface{}{
+			"tracker_id": newT.ID,
+			"err":        err,
+		}, "unable to save tracker repository")
 		return nil, InternalError{simpleError{err.Error()}}
 	}
-	log.Printf("updated tracker to %v\n", newT)
+
+	log.Info(ctx, map[string]interface{}{
+		"tracker": newT.ID,
+	}, "Tracker repository successfully updated")
+
 	t2 := app.Tracker{
 		ID:   strconv.FormatUint(id, 10),
 		URL:  t.URL,
@@ -151,13 +191,12 @@ func (r *GormTrackerRepository) Save(ctx context.Context, t app.Tracker) (*app.T
 func (r *GormTrackerRepository) Delete(ctx context.Context, ID string) error {
 	var t = Tracker{}
 	id, err := strconv.ParseUint(ID, 10, 64)
-	if err != nil {
+	if err != nil || id == 0 {
 		// treat as not found: clients don't know it must be a number
 		return NotFoundError{entity: "tracker", ID: ID}
 	}
 	t.ID = id
-	tx := r.db
-	tx = tx.Delete(t)
+	tx := r.db.Delete(t)
 	if err = tx.Error; err != nil {
 		return InternalError{simpleError{err.Error()}}
 	}

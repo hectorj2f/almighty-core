@@ -4,11 +4,20 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/almighty/almighty-core/application"
-	"github.com/almighty/almighty-core/models"
-	"github.com/almighty/almighty-core/remoteworkitem"
-	"github.com/almighty/almighty-core/search"
+	"github.com/fabric8-services/fabric8-wit/account"
+	"github.com/fabric8-services/fabric8-wit/application"
+	"github.com/fabric8-services/fabric8-wit/area"
+	"github.com/fabric8-services/fabric8-wit/auth"
+	"github.com/fabric8-services/fabric8-wit/codebase"
+	"github.com/fabric8-services/fabric8-wit/comment"
+	"github.com/fabric8-services/fabric8-wit/iteration"
+	"github.com/fabric8-services/fabric8-wit/remoteworkitem"
+	"github.com/fabric8-services/fabric8-wit/search"
+	"github.com/fabric8-services/fabric8-wit/space"
+	"github.com/fabric8-services/fabric8-wit/workitem"
+	"github.com/fabric8-services/fabric8-wit/workitem/link"
 	"github.com/jinzhu/gorm"
+	"github.com/pkg/errors"
 )
 
 // A TXIsoLevel specifies the characteristics of the transaction
@@ -36,13 +45,14 @@ const (
 )
 
 var x application.Application = &GormDB{}
+
 var y application.Application = &GormTransaction{}
 
 func NewGormDB(db *gorm.DB) *GormDB {
 	return &GormDB{GormBase{db}, ""}
 }
 
-// GormTransactionSupport implements TransactionSupport for gorm
+// GormBase is a base struct for gorm implementations of db & transaction
 type GormBase struct {
 	db *gorm.DB
 }
@@ -56,12 +66,20 @@ type GormDB struct {
 	txIsoLevel string
 }
 
-func (g *GormBase) WorkItems() application.WorkItemRepository {
-	return models.NewWorkItemRepository(g.db)
+func (g *GormBase) WorkItems() workitem.WorkItemRepository {
+	return workitem.NewWorkItemRepository(g.db)
 }
 
-func (g *GormBase) WorkItemTypes() application.WorkItemTypeRepository {
-	return models.NewWorkItemTypeRepository(g.db)
+func (g *GormBase) WorkItemTypes() workitem.WorkItemTypeRepository {
+	return workitem.NewWorkItemTypeRepository(g.db)
+}
+
+func (g *GormBase) Spaces() space.Repository {
+	return space.NewRepository(g.db)
+}
+
+func (g *GormBase) SpaceResources() space.ResourceRepository {
+	return space.NewResourceRepository(g.db)
 }
 
 func (g *GormBase) Trackers() application.TrackerRepository {
@@ -73,6 +91,56 @@ func (g *GormBase) TrackerQueries() application.TrackerQueryRepository {
 
 func (g *GormBase) SearchItems() application.SearchRepository {
 	return search.NewGormSearchRepository(g.db)
+}
+
+// Identities creates new Identity repository
+func (g *GormBase) Identities() account.IdentityRepository {
+	return account.NewIdentityRepository(g.db)
+}
+
+// Users creates new user repository
+func (g *GormBase) Users() account.UserRepository {
+	return account.NewUserRepository(g.db)
+}
+
+// WorkItemLinkCategories returns a work item link category repository
+func (g *GormBase) WorkItemLinkCategories() link.WorkItemLinkCategoryRepository {
+	return link.NewWorkItemLinkCategoryRepository(g.db)
+}
+
+// WorkItemLinkTypes returns a work item link type repository
+func (g *GormBase) WorkItemLinkTypes() link.WorkItemLinkTypeRepository {
+	return link.NewWorkItemLinkTypeRepository(g.db)
+}
+
+// WorkItemLinks returns a work item link repository
+func (g *GormBase) WorkItemLinks() link.WorkItemLinkRepository {
+	return link.NewWorkItemLinkRepository(g.db)
+}
+
+// Comments returns a work item comments repository
+func (g *GormBase) Comments() comment.Repository {
+	return comment.NewRepository(g.db)
+}
+
+// Iterations returns a iteration repository
+func (g *GormBase) Iterations() iteration.Repository {
+	return iteration.NewIterationRepository(g.db)
+}
+
+// Areas returns a area repository
+func (g *GormBase) Areas() area.Repository {
+	return area.NewAreaRepository(g.db)
+}
+
+// OauthStates returns an oauth state reference repository
+func (g *GormBase) OauthStates() auth.OauthStateReferenceRepository {
+	return auth.NewOauthStateReferenceRepository(g.db)
+}
+
+// Codebases returns a codebase repository
+func (g *GormBase) Codebases() codebase.Repository {
+	return codebase.NewCodebaseRepository(g.db)
 }
 
 func (g *GormBase) DB() *gorm.DB {
@@ -117,12 +185,12 @@ func (g *GormDB) BeginTransaction() (application.Transaction, error) {
 func (g *GormTransaction) Commit() error {
 	err := g.db.Commit().Error
 	g.db = nil
-	return err
+	return errors.WithStack(err)
 }
 
 // Rollback implements TransactionSupport
 func (g *GormTransaction) Rollback() error {
 	err := g.db.Rollback().Error
 	g.db = nil
-	return err
+	return errors.WithStack(err)
 }

@@ -35,8 +35,8 @@ docker-image-deploy:
 .PHONY: docker-publish-deploy
 ## Tags the runnable image and pushes it to the docker hub.
 docker-publish-deploy:
-	docker tag $(DOCKER_IMAGE_DEPLOY) almightycore/almighty-core:latest
-	docker push almightycore/almighty-core:latest
+	docker tag $(DOCKER_IMAGE_DEPLOY) fabric8-services/fabric8-wit:latest
+	docker push fabric8-services/fabric8-wit:latest
 
 .PHONY: docker-build-dir
 ## Creates the docker build directory.
@@ -67,7 +67,7 @@ clean-docker-build-dir:
 ## After calling this command you can invoke all the make targets from the
 ## normal Makefile (e.g. deps, generate, build) inside the build container
 ## by prefixing them with "docker-". For example to execute "make deps"
-## inside the build container, just run "make docker-deps".  
+## inside the build container, just run "make docker-deps".
 ## To remove the container when no longer needed, call "make docker-rm".
 docker-start: docker-build-dir docker-image-builder
 ifneq ($(strip $(shell docker ps -qa --filter "name=$(DOCKER_CONTAINER_NAME)" 2>/dev/null)),)
@@ -97,7 +97,7 @@ endif
 
 # The targets in the following list all depend on a running database container.
 # Make sure you run "make integration-test-env-prepare" before you run any of these targets.
-DB_DEPENDENT_DOCKER_TARGETS = docker-test-migration docker-test-integration docker-coverage-all
+DB_DEPENDENT_DOCKER_TARGETS = docker-test-migration docker-test-integration docker-test-integration-no-coverage docker-coverage-all docker-test-integration-benchmark
 
 $(DB_DEPENDENT_DOCKER_TARGETS):
 	$(eval makecommand:=$(subst docker-,,$@))
@@ -107,13 +107,13 @@ endif
 ifeq ($(strip $(shell docker inspect --format '{{ .NetworkSettings.IPAddress }}' make_postgres_integration_test_1 2>/dev/null)),)
 	$(error Failed to find PostgreSQL container. Try running "make integration-test-env-prepare")
 endif
-	$(eval ALMIGHTY_POSTGRES_HOST := $(shell docker inspect --format '{{ .NetworkSettings.IPAddress }}' make_postgres_integration_test_1 2>/dev/null))
-	docker exec -t $(DOCKER_RUN_INTERACTIVE_SWITCH) "$(DOCKER_CONTAINER_NAME)" bash -ec 'export ALMIGHTY_POSTGRES_HOST=$(ALMIGHTY_POSTGRES_HOST); make $(makecommand)'
+	$(eval F8_POSTGRES_HOST := $(shell docker inspect --format '{{ .NetworkSettings.IPAddress }}' make_postgres_integration_test_1 2>/dev/null))
+	docker exec -t $(DOCKER_RUN_INTERACTIVE_SWITCH) "$(DOCKER_CONTAINER_NAME)" bash -ec 'export F8_POSTGRES_HOST=$(F8_POSTGRES_HOST); make $(makecommand)'
 
 # This is a wildcard target to let you call any make target from the normal makefile
 # but it will run inside the docker container. This target will only get executed if
 # there's no specialized form available. For example if you call "make docker-start"
-# not this target gets executed but the "docker-start" target. 
+# not this target gets executed but the "docker-start" target.
 docker-%:
 	$(eval makecommand:=$(subst docker-,,$@))
 ifeq ($(strip $(shell docker ps -qa --filter "name=$(DOCKER_CONTAINER_NAME)" 2>/dev/null)),)

@@ -1,25 +1,25 @@
-= ALMighty Core
+= Fabric8 WIT
 :toc:
 :toc-placement: preamble
 :sectnums:
 :experimental:
 
-image:https://ci.centos.org/buildStatus/icon?job=devtools-almighty-core-build-master[Jenkins,link="https://ci.centos.org/view/Devtools/job/devtools-almighty-core-build-master/lastBuild/"]
-image:https://goreportcard.com/badge/github.com/almighty/almighty-core[Go Report Card, link="https://goreportcard.com/report/github.com/almighty/almighty-core"]
-image:https://godoc.org/github.com/almighty/almighty-core?status.png[GoDoc,link="https://godoc.org/github.com/almighty/almighty-core"]
-image:https://codecov.io/gh/almighty/almighty-core/branch/master/graph/badge.svg[Codecov.io,link="https://codecov.io/gh/almighty/almighty-core"]
+image:https://ci.centos.org/buildStatus/icon?job=devtools-fabric8-wit-build-master[Jenkins,link="https://ci.centos.org/view/Devtools/job/devtools-fabric8-wit-build-master/lastBuild/"]
+image:https://goreportcard.com/badge/github.com/fabric8-services/fabric8-wit[Go Report Card, link="https://goreportcard.com/report/github.com/fabric8-services/fabric8-wit"]
+image:https://godoc.org/github.com/fabric8-services/fabric8-wit?status.png[GoDoc,link="https://godoc.org/github.com/fabric8-services/fabric8-wit"]
+image:https://codecov.io/gh/fabric8-services/fabric8-wit/branch/master/graph/badge.svg[Codecov.io,link="https://codecov.io/gh/fabric8-services/fabric8-wit"]
 
 == Building from source [[building]]
 
 The following guide is mainly targeted towards a Linux or Mac OSX development
 machine. If you are on Windows, we recommend to take a look at
-link:docs/development/getting-started-win.adoc[Getting started with almighty-core development on Windows].
+link:docs/development/getting-started-win.adoc[Getting started with fabric8-wit development on Windows].
 
 === Prerequisites [[prerequisites]]
 
 You need to install:
 
-* `go` (>= v1.6)
+* `go` (>= v1.7)
 * `git`
 * `mercurial`
 * `make`
@@ -32,17 +32,7 @@ Run the following command to find out your Go version.
 $ go version
 ----
 
-*You must at least have Go version 1.6. Our code uses a code generation
-tool called goa and it doesn't play nice together with Go 1.5.*
-
-Ensure the environment variable `GO15VENDOREXPERIMENT`
-is set, for example by running `export GO15VENDOREXPERIMENT=1`.
-In Go `1.6` it is enabled by default and in Go `1.7` it is always enabled
-without the ability to turn it off.
-
-If set, the link:https://github.com/golang/go/wiki/PackageManagementTools#go15vendorexperiment[`GO15VENDOREXPERIMENT`]
-variable tells `go` to look for dependencies not only in the `GOPATH` (as usual)
-but also in a `vendor` directory located in the source directory.
+*You must at least have Go version 1.7.*
 
 See <<fetch-dependencies>> to see an explanaition on how we deal with
 dependencies.
@@ -75,7 +65,7 @@ how to build.
 Check out the code
 
 ----
-$ git clone https://github.com/almighty/almighty-core $GOPATH/src/github.com/almighty/almighty-core
+$ git clone https://github.com/fabric8-services/fabric8-wit $GOPATH/src/github.com/fabric8-services/fabric8-wit
 ----
 
 === Build [[build]]
@@ -90,7 +80,7 @@ To fetch the dependencies, generate code and finally build the project you can
 type `make` in a freshly clone repository of this project.
 
 ----
-$ cd $GOPATH/src/github.com/almighty/almighty-core
+$ cd $GOPATH/src/github.com/fabric8-services/fabric8-wit
 $ make
 ----
 
@@ -113,7 +103,7 @@ called `vendor`. This way we can ensure that every developer and our CI system
 is using the same version.
 
 ----
-$ cd $GOPATH/src/github.com/almighty/almighty-core
+$ cd $GOPATH/src/github.com/fabric8-services/fabric8-wit
 $ make deps
 ----
 
@@ -128,7 +118,7 @@ You need to run this command if you just checked out the code and later if
 you've modified the designs.
 
 ----
-$ cd $GOPATH/src/github.com/almighty/almighty-core
+$ cd $GOPATH/src/github.com/fabric8-services/fabric8-wit
 $ make generate
 ----
 
@@ -137,7 +127,7 @@ $ make generate
 If you want to just build the ALM server and client, run `make build`.
 
 ----
-$ cd $GOPATH/src/github.com/almighty/almighty-core
+$ cd $GOPATH/src/github.com/fabric8-services/fabric8-wit
 $ make build
 ----
 
@@ -147,7 +137,7 @@ This removes all downloaded dependencies, all generated code and compiled
 artifacts.
 
 ----
-$ cd $GOPATH/src/github.com/almighty/almighty-core
+$ cd $GOPATH/src/github.com/fabric8-services/fabric8-wit
 $ make clean
 ----
 
@@ -166,7 +156,7 @@ unit-tests::
 Unit tests have the minimum requirement on time and environment setup.
 +
 ----
-$ cd $GOPATH/src/github.com/almighty/almighty-core
+$ cd $GOPATH/src/github.com/fabric8-services/fabric8-wit
 $ make test-unit
 ----
 
@@ -175,7 +165,7 @@ Integration tests demand more setup (i.e. the PostgreSQL DB must be already
 running) and probably time. We recommend that you use `docker-compose up -d db`.
 +
 ----
-$ cd $GOPATH/src/github.com/almighty/almighty-core
+$ cd $GOPATH/src/github.com/fabric8-services/fabric8-wit
 $ make test-integration
 ----
 
@@ -183,7 +173,7 @@ all::
 To run both, the unit and the integration tests you can run
 +
 ----
-$ cd $GOPATH/src/github.com/almighty/almighty-core
+$ cd $GOPATH/src/github.com/fabric8-services/fabric8-wit
 $ make test-all
 ----
 
@@ -211,7 +201,7 @@ Here's how the <placeholders> expand
 
 [horizontal]
 `<package>`::
-something like `github.com/almighty/almighty-core/models`
+something like `github.com/fabric8-services/fabric8-wit/models`
 
 `<test>`::
 `unit` or `integration`
@@ -256,8 +246,8 @@ postgres.user: postgres
 postgres.password: mysecretpassword
 postgres.database: postgres
 postgres.sslmode: disable
-# The number of times alm server will attempt to open a connection to the database before it gives up
-postgres.connection.maxretries: 50
+# The amount of time in seconds before the connection times out
+postgres.connection.timeout: 5
 # Duration to wait before trying to connect again
 postgres.connection.retrysleep: 1s
 
@@ -274,7 +264,7 @@ http.address: 0.0.0.0:8080
 # Enable development related features, e.g. token generation endpoint
 developer.mode.enabled: false
 
-# Whether you want to create the common work item types such as system.bug, system.feature, ...
+# Whether you want to create the common work item types such as bug, feature, ...
 populate.commontypes: true
 
 # -----------------------------
@@ -334,15 +324,17 @@ github.secret : 2fe6736e90a9283036a37059d75ac0c82f4f5288
 Although this is a YAML file, we highly suggest to stick to this rather lenghty notation instead of nesting structs.
 
 To override configuration values using environment variables, use the prefix
-`ALMIGHTY_` and replace the dots in the variables names with underscores.
+`F8_` and replace the dots in the variables names with underscores.
 
-For example to override `postgres.password`, set the environment variable `ALMIGHTY_POSTGRES_PASSWORD` to the value of you liking.
+For example to override `postgres.password`, set the environment variable `F8_POSTGRES_PASSWORD` to the value of you liking.
 
-NOTE: Environment variables override the default values and the ones you've set in your config file. 
+NOTE: config.yaml is *not* processed by default. In order to use it, the following environment variable must be set `export F8_CONFIG_FILE_PATH="config.yaml"`
+
+NOTE: Environment variables override the default values and the ones you've set in your config file.
 
 ==== Development
 
-Only files `+./*.go+`, `+./design/*.go+`, `+./models/*.go+` and `+./tool/alm-cli/main.go+` should be edited.
+Only files `+./*.go+`, `+./design/*.go+`, `+./models/*.go+` and `+./tool/wit-cli/main.go+` should be edited.
 
 These files and directory are generated:
 
@@ -358,7 +350,7 @@ These files and directory are generated:
 Start up dependent docker services using `docker-compose` and runs auto reload on source change tool `fresh`.
 
 ----
-$ cd $GOPATH/src/github.com/almighty/almighty-core
+$ cd $GOPATH/src/github.com/fabric8-services/fabric8-wit
 $ make dev
 ----
 
@@ -370,26 +362,26 @@ NOTE: The CLI needs the API Server which was started on executing `make dev`  to
 
 Generate a token for future use.
 ----
-./bin/alm-cli generate login -H localhost:8080 --pp
+./bin/wit-cli generate login -H localhost:8080 --pp
 ----
 
-You should get Token in response, save this token in your favourite editor as you need to use this token for POST API calls  
+You should get Token in response, save this token in your favourite editor as you need to use this token for POST API calls
 
 Create a work item type (using above token).
 ----
-./bin/alm-cli create workitemtype --key "<GENERATED TOKEN>" --payload '{"fields":{"system.owner":{"Type":{"Kind":"user"},"Required":true},"system.state":{"Type":{"Kind":"string"},"Required":false}},"name":"Epic"}' -H localhost:8080 --pp
+./bin/wit-cli create workitemtype --key "<GENERATED TOKEN>" --payload '{"fields":{"system.owner":{"Type":{"Kind":"user"},"Required":true},"system.state":{"Type":{"Kind":"string"},"Required":false}},"name":"Epic"}' -H localhost:8080 --pp
 ----
 Note: Work Item Type `Name` is unique. If one tries to create another work item type with same name, error will be trown.
 
 Retrieve the work item type.
 
 ----
-$ ./bin/alm-cli show workitemtype --name "Epic" -H localhost:8080
+$ ./bin/wit-cli show workitemtype --name "Epic" -H localhost:8080
 ----
 
 List all available work item types.
 ----
-$ ./bin/alm-cli list workitemtype -H localhost:8080 --pp
+$ ./bin/wit-cli list workitemtype -H localhost:8080 --pp
 ----
 
 Create a work item.
@@ -398,13 +390,13 @@ Based on WorkItemType created above, we can create WorkItem.
 We need to use name of work item type in the `type` field below.
 
 ----
-$ ./bin/alm-cli create workitem --key "<GENERATED TOKEN>" --payload '{"type": "Epic", "fields": { "system.owner": "tmaeder", "system.state": "open" }}' -H localhost:8080
+$ ./bin/wit-cli create workitem --key "<GENERATED TOKEN>" --payload '{"type": "Epic", "fields": { "system.owner": "tmaeder", "system.state": "open" }}' -H localhost:8080
 ----
 
 Retrieve the work item.
 
 ----
-$ ./bin/alm-cli show workitem --id 1 -H localhost:8080 --pp
+$ ./bin/wit-cli show workitem --id 1 -H localhost:8080 --pp
 ----
 
 === Reset Database
@@ -423,21 +415,40 @@ In case you have mulitple almighty running use `docker ps` to locate the contain
 
 System defined Work Item Types are
 
- * system.userstory
- * system.valueproposition
- * system.fundamental
- * system.experience
- * system.feature
- * system.bug
+ * userstory
+ * valueproposition
+ * fundamental
+ * experience
+ * feature
+ * bug
 
 Use any one of above to create Work Item based on that type.
-Following example creates a Work Item of type `system.userstory`
+Following example creates a Work Item of type `userstory`
 ----
-$ ./bin/alm-cli create workitem --key "<GENERATED TOKEN>" --payload '{"type": "system.userstory", "fields": { "system.title": "A catchy Title", "system.owner": "tmaeder", "system.state": "open" }}' -H localhost:8080
+$ ./bin/wit-cli create workitem --key "<GENERATED TOKEN>" --payload '{ "data": { "attributes": { "system.owner": "tmaeder", "system.state": "open", "system.title": "Example of an Epic", "version": "1" }, "relationships": { "baseType": { "data": { "id": "Epic", "type": "workitemtypes" } } }, "type": "workitems" } }' -H localhost:8080
 ----
 
 In response you should get ID of created item, using that you can retrieve the work item.
 
 ----
-$ ./bin/alm-cli show workitem --id <ID> -H localhost:8080 --pp
+$ ./bin/wit-cli show workitem --id <ID> -H localhost:8080 --pp
 ----
+
+== Prod preview setup
+
+In order to setup wit to work against link:https://prod-preview.openshift.io/[prod preview] one needs to update `token.publickey` in config.yaml.
+
+NOTE: Public key can be obtained from https://sso.prod-preview.openshift.io/auth/realms/fabric8/
+
+Also, the following environment variables must be set:
+
+* `export F8_DEVELOPER_MODE_ENABLED=1`
+* `export F8_OPENSHIFT_TENANT_MASTERURL="https://console.free-int.openshift.com/"`
+* `export F8_KEYCLOAK_REALM="fabric8"`
+* `export F8_CONFIG_FILE_PATH="config.yaml"`
+
+== che-starter setup
+
+link:https://github.com/redhat-developer/che-starter[che-starter] endpoint can be configure via the following environment variable:
+
+* `export F8_CHESTARTERURL="http://localhost:10000/"`

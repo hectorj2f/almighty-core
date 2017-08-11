@@ -2,7 +2,8 @@ package criteria
 
 import (
 	"testing"
-	"github.com/almighty/almighty-core/resource"
+
+	"github.com/fabric8-services/fabric8-wit/resource"
 )
 
 func TestGetParent(t *testing.T) {
